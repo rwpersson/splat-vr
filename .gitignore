@@ -4,3 +4,21 @@
 *.sog
 *.splat
 captures/
+
+# Unity project (lives in SplatVR/): generated folders and files
+SplatVR/[Ll]ibrary/
+SplatVR/[Tt]emp/
+SplatVR/[Oo]bj/
+SplatVR/[Bb]uild/
+SplatVR/[Bb]uilds/
+SplatVR/[Ll]ogs/
+SplatVR/[Uu]ser[Ss]ettings/
+SplatVR/.vs/
+SplatVR/.vscode/
+SplatVR/*.csproj
+SplatVR/*.sln
+SplatVR/*.slnx
+SplatVR/*.apk
+SplatVR/*.aab
+SplatVR/sysinfo.txt
+SplatVR/crashlytics-build.properties
