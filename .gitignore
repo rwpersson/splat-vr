@@ -1,0 +1,6 @@
+# Large splat files: keep them out of git
+*.ply
+*.spz
+*.sog
+*.splat
+captures/
