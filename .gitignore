@@ -22,3 +22,5 @@ SplatVR/*.apk
 SplatVR/*.aab
 SplatVR/sysinfo.txt
 SplatVR/crashlytics-build.properties
+SplatVR/.utmp/
+SplatVR/[Rr]ecordings/
