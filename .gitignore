@@ -24,3 +24,7 @@ SplatVR/sysinfo.txt
 SplatVR/crashlytics-build.properties
 SplatVR/.utmp/
 SplatVR/[Rr]ecordings/
+
+# Generated splat assets (regenerate from captures/ via Tools > Gaussians > 3D > Create Splat Asset)
+SplatVR/Assets/Gaussians/
+SplatVR/Assets/Gaussians.meta
