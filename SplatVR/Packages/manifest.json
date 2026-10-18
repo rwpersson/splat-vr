@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "net.kleinbeck.gaussians": "https://github.com/ninjamode/Unity-VR-Gaussian-Splatting.git#9675b7a60ab359f233f0e95671ae699bdf8b1e69",
     "com.unity.ai.navigation": "2.0.15",
     "com.unity.collab-proxy": "2.13.6",
     "com.unity.ide.rider": "3.0.40",
