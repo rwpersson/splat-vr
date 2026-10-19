@@ -737,7 +737,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussianSplat3DRenderer
   m_Group: {fileID: 0}
-  m_Asset: {fileID: 11400000, guid: d0e8ccf0cc6922d468b5f947fc542410, type: 2}
+  m_Asset: {fileID: 11400000, guid: db300acf4825df94f8340c130d72158a, type: 2}
   m_RenderPath: 1
   m_ProjectionMode: 1
   m_RenderOrder: 0
@@ -777,7 +777,7 @@ Transform:
   m_GameObject: {fileID: 2000549161}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.3, z: 0.8}
+  m_LocalPosition: {x: 0, y: 1, z: 0.8}
   m_LocalScale: {x: 1, y: -1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
