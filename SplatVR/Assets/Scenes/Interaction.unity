@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c12d929a7f62c48adbe9ff45c9a33ff0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussianSplat3DRenderer
-  m_Group: {fileID: 0}
+  m_Group: {fileID: 1739159957}
   m_Asset: {fileID: 11400000, guid: 874cf3e9cd467ce43a00b2c79c35f595, type: 2}
   m_RenderPath: 1
   m_ProjectionMode: 1
@@ -1022,6 +1022,69 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1739159956
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1739159958}
+  - component: {fileID: 1739159957}
+  m_Layer: 0
+  m_Name: Splat Group
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1739159957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739159956}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd84eff5ea94c4a871ccbadeea3ffd9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussiansGroup
+  m_Members:
+  - {fileID: 156106535}
+  - {fileID: 2000549162}
+  m_AlphaCutoff: 0.003921569
+  m_OpacityAwareBounds: 1
+  m_WriteDepth: 0
+  m_ProjectionMode: 1
+  m_CompactionThreshold: 100000
+  m_SortPrecision: 32
+  m_SortNthFrame: 1
+  m_RenderPath: 1
+  m_ConvertGammaToLinear: 1
+  m_RenderOrder: 0
+  m_ShaderSplats: {fileID: 4800000, guid: ed800126ae8844a67aad1974ddddd59c, type: 3}
+  m_ShaderComposite: {fileID: 4800000, guid: 7e184af7d01193a408eb916d8acafff9, type: 3}
+  m_CSSplatUtilities: {fileID: 7200000, guid: ec84f78b836bd4f96a105d6b804f08bd, type: 3}
+  m_OptimizationOverrides: 0
+  m_CompactVisibleSplats: 0
+  m_Cutouts: []
+--- !u!4 &1739159958
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739159956}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.58352, y: 0, z: 15.12469}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1842760317
 GameObject:
   m_ObjectHideFlags: 0
@@ -1291,7 +1354,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c12d929a7f62c48adbe9ff45c9a33ff0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussianSplat3DRenderer
-  m_Group: {fileID: 0}
+  m_Group: {fileID: 1739159957}
   m_Asset: {fileID: 11400000, guid: db300acf4825df94f8340c130d72158a, type: 2}
   m_RenderPath: 1
   m_ProjectionMode: 1
@@ -1396,3 +1459,4 @@ SceneRoots:
   - {fileID: 2051306368}
   - {fileID: 1989835379}
   - {fileID: 278488691}
+  - {fileID: 1739159958}
