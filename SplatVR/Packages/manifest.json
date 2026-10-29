@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#aa5fc638d623f56178d50329d9ad8c541a57fe66",
     "net.kleinbeck.gaussians": "https://github.com/ninjamode/Unity-VR-Gaussian-Splatting.git#9675b7a60ab359f233f0e95671ae699bdf8b1e69",
     "com.unity.ai.navigation": "2.0.15",
     "com.unity.collab-proxy": "2.13.6",
