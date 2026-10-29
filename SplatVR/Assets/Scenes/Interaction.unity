@@ -242,7 +242,7 @@ GameObject:
   - component: {fileID: 156106536}
   - component: {fileID: 156106535}
   m_Layer: 0
-  m_Name: Desk 100k
+  m_Name: Desk 75k
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussianSplat3DRenderer
   m_Group: {fileID: 1739159957}
-  m_Asset: {fileID: 11400000, guid: 874cf3e9cd467ce43a00b2c79c35f595, type: 2}
+  m_Asset: {fileID: 11400000, guid: 319edd20c54a65d429bdd97dca94bc49, type: 2}
   m_RenderPath: 1
   m_ProjectionMode: 1
   m_RenderOrder: 0
