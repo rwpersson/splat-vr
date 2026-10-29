@@ -1032,6 +1032,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1739159958}
   - component: {fileID: 1739159957}
+  - component: {fileID: 1739159959}
   m_Layer: 0
   m_Name: Splat Group
   m_TagString: Untagged
@@ -1085,6 +1086,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1739159959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739159956}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd7c04ba90a86034097f092e1b305040, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroupSortToggle
+  _slowSortEveryN: 2
 --- !u!1 &1842760317
 GameObject:
   m_ObjectHideFlags: 0
@@ -1355,7 +1369,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Gaussians.ThreeD::Gaussians.ThreeD.GaussianSplat3DRenderer
   m_Group: {fileID: 1739159957}
-  m_Asset: {fileID: 11400000, guid: db300acf4825df94f8340c130d72158a, type: 2}
+  m_Asset: {fileID: 11400000, guid: d31a832a01f608f49a282e723c65e112, type: 2}
   m_RenderPath: 1
   m_ProjectionMode: 1
   m_RenderOrder: 0
