@@ -1,0 +1,22 @@
+{
+    "name": "Gaussians.URP",
+    "rootNamespace": "Gaussians",
+    "references": [
+        "Gaussians.Core",
+        "Gaussians.ThreeD",
+        "Gaussians.TwoD",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "GAUSSIANS_ENABLE_URP"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "GAUSSIANS_ENABLE_URP"
+        }
+    ]
+}
