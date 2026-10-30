@@ -305,8 +305,25 @@ namespace Gaussians.ThreeD
             r.DepthMaterial.EnableKeyword("GAUSSIANS_GROUPED");
             var draw = Draw(r); draw.Material = r.DepthMaterial; return draw;
         }
+        // SplatVR patch 2: when true, the non-compacted group draw uses Graphics.RenderMeshPrimitives with the
+        // leader's quad mesh, exactly like individual renderers (QueueDirectTransparentDraw), instead of
+        // Graphics.DrawProcedural with the 36-entry index buffer. Toggled at runtime for A/B (GroupSortToggle).
+        public static bool UseMeshPrimitivesSubmit = true;
+
         internal static void Submit(CameraResources r)
         {
+            if (!r.Compact && UseMeshPrimitivesSubmit)
+            {
+                var renderParams = new RenderParams(r.Material)
+                {
+                    worldBounds = r.Bounds,
+                    matProps = r.Properties,
+                    layer = r.Leader.gameObject.layer,
+                    camera = r.Camera,
+                };
+                Graphics.RenderMeshPrimitives(renderParams, r.Leader.GroupQuadMesh, 0, r.Count);
+                return;
+            }
             if (r.Compact)
                 Graphics.DrawProceduralIndirect(r.Material, r.Bounds, MeshTopology.Triangles, r.Leader.GroupIndices,
                     r.Buffers.CompactArgs, 20, r.Camera, r.Properties, ShadowCastingMode.Off, false, r.Leader.gameObject.layer);

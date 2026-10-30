@@ -23,6 +23,7 @@ public class GroupSortToggle : MonoBehaviour
     private InputAction _groupAction;
     private InputAction _shAction;
     private InputAction _compactionAction;
+    private InputAction _submitAction;
 
     private void Awake()
     {
@@ -34,6 +35,7 @@ public class GroupSortToggle : MonoBehaviour
         _groupAction = CreateButton("Toggle Group On/Off", "<XRController>{LeftHand}/thumbstickClicked", "<Keyboard>/g");
         _shAction = CreateButton("Toggle SH Order", "<XRController>{LeftHand}/primaryButton", "<Keyboard>/h");
         _compactionAction = CreateButton("Toggle Group Compaction", "<XRController>{LeftHand}/secondaryButton", "<Keyboard>/c");
+        _submitAction = CreateButton("Toggle Group Submit Path", "<XRController>{RightHand}/primaryButton", "<Keyboard>/p");
     }
 
     private static InputAction CreateButton(string name, string controllerPath, string keyboardPath)
@@ -51,6 +53,8 @@ public class GroupSortToggle : MonoBehaviour
         _groupAction.performed += OnToggleGroup;
         _shAction.performed += OnToggleSh;
         _compactionAction.performed += OnToggleCompaction;
+        _submitAction.performed += OnToggleSubmit;
+        _submitAction.Enable();
         _sortAction.Enable();
         _groupAction.Enable();
         _shAction.Enable();
@@ -63,6 +67,8 @@ public class GroupSortToggle : MonoBehaviour
         _groupAction.performed -= OnToggleGroup;
         _shAction.performed -= OnToggleSh;
         _compactionAction.performed -= OnToggleCompaction;
+        _submitAction.performed -= OnToggleSubmit;
+        _submitAction.Disable();
         _sortAction.Disable();
         _groupAction.Disable();
         _shAction.Disable();
@@ -75,6 +81,7 @@ public class GroupSortToggle : MonoBehaviour
         _groupAction?.Dispose();
         _shAction?.Dispose();
         _compactionAction?.Dispose();
+        _submitAction?.Dispose();
     }
 
     private void Start() => Report("start");
@@ -109,6 +116,13 @@ public class GroupSortToggle : MonoBehaviour
         Report("compaction");
     }
 
+    private void OnToggleSubmit(InputAction.CallbackContext context)
+    {
+        // SplatVR patch 2 A/B: instanced quad-mesh path (like individual renderers) vs ninjamode's DrawProcedural path.
+        GaussiansGroup.UseMeshPrimitivesSubmit = !GaussiansGroup.UseMeshPrimitivesSubmit;
+        Report("submit");
+    }
+
     private int CurrentShOrder()
     {
         foreach (GaussianSplat3DRenderer member in _group.Members)
@@ -121,5 +135,6 @@ public class GroupSortToggle : MonoBehaviour
 
     private void Report(string changed) =>
         Debug.Log($"[Group] t={Time.realtimeSinceStartup:F1}s changed={changed} groupEnabled={_group.enabled} " +
-                  $"sortEveryN={_group.m_SortNthFrame} shOrder={CurrentShOrder()} compactionThreshold={_group.m_CompactionThreshold}");
+                  $"sortEveryN={_group.m_SortNthFrame} shOrder={CurrentShOrder()} compactionThreshold={_group.m_CompactionThreshold} " +
+                  $"submit={(GaussiansGroup.UseMeshPrimitivesSubmit ? "meshPrimitives" : "drawProcedural")}");
 }
