@@ -44,6 +44,15 @@ namespace Gaussians.ThreeD
         public bool m_ConvertGammaToLinear = true;
         [Tooltip("URP only: adds a draw writing approximate splat-center depth after transparent color for XR reprojection. Does not change color blending or fill empty background pixels.")]
         public bool m_WriteDepth = false;
+        // SplatVR patch 2: occlusion between separately sorted splat objects (and meshes) without a GaussiansGroup.
+        [Tooltip("URP only, for the environment (e.g. a room scan): draw this object's color first, then write approximate depth for its solid splats, so other splats behind it are hidden. It never hides its own splats.")]
+        public bool m_Occluder = false;
+        [Range(0.0f, 1.0f)]
+        [Tooltip("Occluder depth: minimum per-fragment opacity that counts as solid. Higher = fewer, cheaper depth fragments, but thin or faint surfaces stop occluding.")]
+        public float m_OccluderAlphaCutoff = 0.5f;
+        [Range(0.0f, 0.2f)]
+        [Tooltip("Occluder depth: meters the written depth is pushed away from the camera, so this object's own surface splats (which sit around, not exactly at, the solid layer) still pass.")]
+        public float m_OccluderDepthOffset = 0.02f;
         // One 8-bit alpha step. This is a coverage and
         // quality/performance convention, not a scene-specific depth criterion.
         public const float DefaultAlphaCutoff = 1.0f / 255.0f;
@@ -200,6 +209,9 @@ namespace Gaussians.ThreeD
         {
             public static readonly int ConvertGammaToLinear = Shader.PropertyToID("_ConvertGammaToLinear");
             public static readonly int AlphaCutoff = Shader.PropertyToID("_AlphaCutoff");
+            // SplatVR patch 2
+            public static readonly int OccluderAlphaCutoff = Shader.PropertyToID("_OccluderAlphaCutoff");
+            public static readonly int OccluderDepthOffset = Shader.PropertyToID("_OccluderDepthOffset");
             public static readonly int OpacityAwareBounds = Shader.PropertyToID("_OpacityAwareBounds");
             public static readonly int SplatPos = Shader.PropertyToID("_SplatPos");
             public static readonly int SplatOther = Shader.PropertyToID("_SplatOther");

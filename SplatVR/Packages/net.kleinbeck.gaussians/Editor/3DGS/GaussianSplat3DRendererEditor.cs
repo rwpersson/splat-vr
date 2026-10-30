@@ -125,6 +125,10 @@ namespace Gaussians.ThreeD.Editor
             if (groupControlled)
                 EditorGUILayout.HelpBox(allGroupControlled ? "Disabled fields are controlled by the group. Member settings are retained for independent rendering when the group is disabled." : "Some selected renderers use group overrides. Select a renderer individually to inspect its effective shared settings.", MessageType.Info);
             SharedField("m_WriteDepth", new GUIContent("Write Depth (URP Only)"));
+            // SplatVR patch 2: per-renderer occluder depth pre-pass (not a group override).
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Occluder"), new GUIContent("Occluder (URP Only)"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_OccluderAlphaCutoff"), new GUIContent("Occluder Alpha Cutoff"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_OccluderDepthOffset"), new GUIContent("Occluder Depth Offset (m)"));
             SharedField("m_AlphaCutoff", new GUIContent("Alpha Cutoff"));
             SharedField("m_OpacityAwareBounds", new GUIContent("Opacity Aware Bounds"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_MinimumSplatRadiusPixels"), new GUIContent("Minimum Splat Radius (px)", "Projected three-sigma radius before footprint filtering, in render-target pixels. Optimal uses a conservative projected bound. Zero disables size pruning. Higher values can remove detail; 0.7 is a provisional safeguard for tiny models."));

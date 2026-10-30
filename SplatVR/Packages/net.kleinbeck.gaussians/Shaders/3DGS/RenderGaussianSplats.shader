@@ -33,6 +33,10 @@ Shader "Gaussians/3D/Render Splats"
         uint _ConvertGammaToLinear;
         float _AlphaCutoff;
         uint _OpacityAwareBounds;
+        // SplatVR patch 2: the occluder depth pass uses its own (higher) "solid" cutoff for both
+        // quad size and discard, and pushes its depth away from the camera by a fixed distance.
+        float _OccluderAlphaCutoff;
+        float _OccluderDepthOffset;
 
         struct appdata
         {
@@ -55,7 +59,9 @@ Shader "Gaussians/3D/Render Splats"
             UNITY_VERTEX_OUTPUT_STEREO
         };
 
-        v2f vert(appdata input)
+        // SplatVR patch 2: body of vert() with the alpha cutoff as a parameter (was _AlphaCutoff directly),
+        // so the occluder pass can size quads by its own cutoff.
+        v2f VertWithCutoff(appdata input, float alphaCutoff)
         {
             v2f o = (v2f)0;
             UNITY_SETUP_INSTANCE_ID(input);
@@ -91,7 +97,7 @@ Shader "Gaussians/3D/Render Splats"
             if (_SplatBitsValid != 0u && (_SplatSelectedBits.Load((index / 32u) * 4u) & (1u << (index & 31u))) != 0u)
                 o.col.a = -1;
         #endif
-            float halfExtent = SplatQuadHalfExtent(o.col.a, _AlphaCutoff, _OpacityAwareBounds);
+            float halfExtent = SplatQuadHalfExtent(o.col.a, alphaCutoff, _OpacityAwareBounds);
             if (halfExtent <= 0.0)
             {
                 o.vertex = asfloat(0x7fc00000);
@@ -134,7 +140,36 @@ Shader "Gaussians/3D/Render Splats"
             return o;
         }
 
-        half EvaluateSplatAlpha(inout v2f i)
+        v2f vert(appdata input) { return VertWithCutoff(input, _AlphaCutoff); }
+
+        // SplatVR patch 2: occluder depth vertex. Solid cutoff for the quad size, then writes the depth of the
+        // point _OccluderDepthOffset meters farther along the view ray than the splat center. Clip z is affine
+        // in view depth w (z = a*w + b), so the pushed NDC depth is (a*(w+d) + b)/(w+d). It is re-multiplied
+        // by this vertex's w (which varies per vertex with optimal projection), so only depth changes, not coverage.
+        // The center's w is recovered from the vertex, since x/y/z were offset but the center depth wasn't:
+        // vert sets z = centerNdcZ * w (optimal) or keeps the center's clip z/w (standard).
+        v2f vertOccluder(appdata input)
+        {
+            v2f o = VertWithCutoff(input, _OccluderAlphaCutoff);
+            float n = _ProjectionParams.y;
+            float f = _ProjectionParams.z;
+        #if defined(UNITY_REVERSED_Z)
+            float a = -n / (f - n);
+            float b = n * f / (f - n);
+        #else
+            float a = (f + n) / (f - n);
+            float b = -2.0 * n * f / (f - n);
+        #endif
+            // Center depth from its NDC z: ndc = a + b/w  =>  w = b / (ndc - a).
+            float centerNdc = o.vertex.z / o.vertex.w;
+            float centerW = b / (centerNdc - a);
+            float pushedW = centerW + _OccluderDepthOffset;
+            o.vertex.z = (a + b / pushedW) * o.vertex.w;
+            return o;
+        }
+
+        // SplatVR patch 2: alpha cutoff is a parameter (was _AlphaCutoff directly), see EvaluateSplatAlpha(i) below.
+        half EvaluateSplatAlphaWithCutoff(inout v2f i, float alphaCutoff)
         {
             float2 pos = i.pos;
         #if defined(GAUSSIANS_METAL_FOVEATION) && !defined(GAUSSIANS_OPTIMAL_PROJECTION)
@@ -157,9 +192,10 @@ Shader "Gaussians/3D/Render Splats"
                 }
                 i.col.rgb = lerp(i.col.rgb, selectedColor, 0.5);
             }
-            if (alpha <= 0 || alpha < _AlphaCutoff) discard;
+            if (alpha <= 0 || alpha < alphaCutoff) discard;
             return alpha;
         }
+        half EvaluateSplatAlpha(inout v2f i) { return EvaluateSplatAlphaWithCutoff(i, _AlphaCutoff); }
         half4 frag(v2f i) : SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
@@ -171,6 +207,13 @@ Shader "Gaussians/3D/Render Splats"
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
             EvaluateSplatAlpha(i);
             // Approximate center depth, not a reconstructed Gaussian surface.
+            return 0;
+        }
+        // SplatVR patch 2: occluder depth fragment, only "solid" fragments write depth.
+        half4 fragOccluderDepth(v2f i) : SV_Target
+        {
+            UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+            EvaluateSplatAlphaWithCutoff(i, _OccluderAlphaCutoff);
             return 0;
         }
         ENDCG
@@ -201,6 +244,22 @@ Shader "Gaussians/3D/Render Splats"
             #pragma multi_compile_instancing
             #pragma multi_compile_local __ GAUSSIANS_DIRECT_TRANSPARENT
             #pragma multi_compile_local __ GAUSSIANS_GROUPED
+            #pragma multi_compile_local __ GAUSSIANS_OPTIMAL_PROJECTION
+            ENDCG
+        }
+        // SplatVR patch 2: occluder depth pre-pass (pass index 2, GaussianSplat3DRenderSystem.kOccluderDepthPass).
+        // Runs before any splat color; solid splats only, depth pushed back by _OccluderDepthOffset.
+        Pass
+        {
+            Name "SplatOccluderDepth"
+            Tags { "LightMode"="GaussianSplatOccluderDepth" }
+            ZWrite On ZTest LEqual ColorMask 0 Cull Off
+            CGPROGRAM
+            #pragma vertex vertOccluder
+            #pragma fragment fragOccluderDepth
+            #pragma require compute
+            #pragma multi_compile_instancing
+            #pragma multi_compile_local __ GAUSSIANS_DIRECT_TRANSPARENT
             #pragma multi_compile_local __ GAUSSIANS_OPTIMAL_PROJECTION
             ENDCG
         }

@@ -142,7 +142,8 @@ namespace Gaussians.ThreeD
         internal void SubmitDirectSplatsForCamera(CameraSelection selection)
         {
             foreach (var gs in selection.Renderers)
-                if (gs.usesDirectTransparentPath)
+                // SplatVR patch 2: occluders draw their color in the occluder pre-pass instead (see GatherOccluderDraws).
+                if (gs.usesDirectTransparentPath && !gs.m_Occluder)
                     gs.QueueDirectTransparentDraw(selection.Camera);
             foreach (var group in selection.Groups) if (group.Direct) GaussiansGroup.Submit(group);
         }
@@ -290,6 +291,52 @@ namespace Gaussians.ThreeD
             }
             foreach (var group in selection.Groups)
                 if (group.WriteDepth) draws.Add(GaussiansGroup.DepthDraw(group));
+            return draws;
+        }
+
+        // SplatVR patch 2: occluder ("environment") pre-pass, drawn after Prepare and before Unity's transparent
+        // queue. Each occluder draws its color first (direct path; composite-path occluders were already drawn in
+        // the accumulate pass), then writes depth for its solid splats (SplatOccluderDepth: solid threshold +
+        // depth pushed back). So occluders never depth-reject their own splats, while every splat drawn later
+        // (the transparent queue) is hidden behind them. Same draw setup as GatherDepthDraws.
+        // Group members are not handled (a group already sorts its members together).
+        internal const int kOccluderDepthPass = 2;
+        internal List<SplatDraw> GatherOccluderDraws(CameraSelection selection, out List<SplatDraw> colorDraws)
+        {
+            var camera = selection.Camera;
+            var draws = new List<SplatDraw>();
+            colorDraws = new List<SplatDraw>();
+            foreach (var gs in selection.Renderers)
+            {
+                if (!gs.m_Occluder || gs.EffectiveRenderMode != GaussianSplat3DRenderer.RenderMode.Splats)
+                    continue;
+
+                var resources = gs.GetCameraRenderResources(camera);
+                if (resources == null)
+                    continue;
+                gs.EnsureMaterials();
+                var properties = new MaterialPropertyBlock();
+                gs.BindViewProperties(properties, camera, resources);
+                properties.SetFloat(GaussianSplat3DRenderer.Props.OccluderAlphaCutoff, Mathf.Clamp01(gs.m_OccluderAlphaCutoff));
+                properties.SetFloat(GaussianSplat3DRenderer.Props.OccluderDepthOffset, Mathf.Max(0f, gs.m_OccluderDepthOffset));
+                var draw = new SplatDraw
+                {
+                    Indices = gs.m_GpuIndexBuffer,
+                    Matrix = gs.transform.localToWorldMatrix,
+                    Material = gs.m_MatSplatsDirect,
+                    Properties = properties,
+                    Count = gs.splatCount,
+                    IndirectArgs = gs.GetIndirectArgs(resources),
+                    RenderOrder = gs.EffectiveRenderOrder,
+                    SortPosition = gs.transform.position,
+                };
+                draws.Add(draw);
+                if (gs.usesDirectTransparentPath)
+                    colorDraws.Add(draw);
+            }
+            // Back to front between occluders, like the transparent queue (each object's splats are already sorted).
+            colorDraws.Sort((a, b) => a.RenderOrder != b.RenderOrder ? a.RenderOrder.CompareTo(b.RenderOrder) :
+                camera.transform.InverseTransformPoint(b.SortPosition).z.CompareTo(camera.transform.InverseTransformPoint(a.SortPosition).z));
             return draws;
         }
 

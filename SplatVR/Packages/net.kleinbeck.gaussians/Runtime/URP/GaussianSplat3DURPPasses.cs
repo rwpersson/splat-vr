@@ -148,8 +148,48 @@ namespace Gaussians
             }
         }
 
+        // SplatVR patch 2: occluder depth pre-pass. Enqueued after m_Pass at the same event, so it runs after
+        // Gaussians.3D.Prepare (view data ready) and before Unity's transparent queue draws direct splat color.
+        // Composite-path accumulation also runs inside m_Pass, so occluders only affect direct-path color.
+        sealed class GaussianSplat3DOccluderDepthPass : ScriptableRenderPass
+        {
+            sealed class PassData
+            {
+                internal List<GaussianSplat3DRenderSystem.SplatDraw> ColorDraws;
+                internal List<GaussianSplat3DRenderSystem.SplatDraw> DepthDraws;
+            }
+
+            public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+            {
+                var camera = frameData.Get<UniversalCameraData>();
+                var cameraState = CaptureCamera(camera);
+                using var cameraScope = cameraState.Apply(camera.camera);
+                var system = GaussianSplat3DRenderSystem.instance;
+                var selection = system.CollectForCamera(camera.camera);
+                var draws = system.GatherOccluderDraws(selection, out var colorDraws);
+                if (draws.Count == 0)
+                    return;
+
+                var resources = frameData.Get<UniversalResourceData>();
+                using var builder = renderGraph.AddRasterRenderPass<PassData>("Gaussians.3D.Occluders", out var data);
+                data.ColorDraws = colorDraws;
+                data.DepthDraws = draws;
+                // Same attachments as GaussianSplat3DDepthPass; here the color attachment also receives occluder color.
+                builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.ReadWrite);
+                builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.ReadWrite);
+                ConfigureFoveation(builder, camera, resources.isActiveTargetBackBuffer);
+                builder.SetRenderFunc(static (PassData pass, RasterGraphContext context) =>
+                {
+                    // Color before depth, so an occluder is only tested against opaque meshes, never its own splats.
+                    DrawSplats(context.cmd, pass.ColorDraws, 0);
+                    DrawSplats(context.cmd, pass.DepthDraws, GaussianSplat3DRenderSystem.kOccluderDepthPass);
+                });
+            }
+        }
+
         GaussianSplat3DRenderPass m_Pass;
         GaussianSplat3DDepthPass m_DepthPass;
+        GaussianSplat3DOccluderDepthPass m_OccluderDepthPass;
 
         internal void Create()
         {
@@ -162,6 +202,10 @@ namespace Gaussians
                 // Preserve all transparent color contributions, then populate the
                 // active depth attachment before URP's final XR Depth Copy.
                 renderPassEvent = RenderPassEvent.AfterRenderingTransparents
+            };
+            m_OccluderDepthPass = new GaussianSplat3DOccluderDepthPass
+            {
+                renderPassEvent = RenderPassEvent.BeforeRenderingTransparents
             };
         }
 
@@ -193,6 +237,12 @@ namespace Gaussians
             m_Pass.ConvertCompositeGammaToLinear = m_ConvertCompositeGammaToLinear;
             m_Pass.requiresIntermediateTexture = compositeIntermediate;
             renderer.EnqueuePass(m_Pass);
+            foreach (var gs in selection.Renderers)
+            {
+                if (!gs.m_Occluder) continue;
+                renderer.EnqueuePass(m_OccluderDepthPass);
+                break;
+            }
             if (selection.HasDepth)
                 renderer.EnqueuePass(m_DepthPass);
         }
