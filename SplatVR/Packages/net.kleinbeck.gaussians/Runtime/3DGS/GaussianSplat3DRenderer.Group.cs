@@ -51,8 +51,6 @@ namespace Gaussians.ThreeD
         internal GraphicsBuffer GroupIndices => m_GpuIndexBuffer;
         // SplatVR patch: lets the group skip its per-vertex selection read when no member has editor selection data.
         internal bool HasEditSelection => m_GpuEditSelected != null && m_GpuEditDeleted != null;
-        // SplatVR patch 2: lets the group draw through the same instanced quad-mesh path as individual renderers.
-        internal Mesh GroupQuadMesh { get { EnsureDirectQuadMesh(); return m_DirectQuadMesh; } }
         internal GpuSorting GroupSorter { get { EnsureSorterAndRegister(); return m_Sorter; } }
         internal void PrepareGroupKeys(CommandBuffer cmd, Camera camera, GraphicsBuffer depths, GraphicsBuffer selected, int offset)
         {
