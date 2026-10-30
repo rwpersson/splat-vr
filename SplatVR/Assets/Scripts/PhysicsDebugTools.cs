@@ -104,6 +104,10 @@ public class PhysicsDebugTools : MonoBehaviour
         _resetTarget.isKinematic = false;
         _resetTarget.linearVelocity = Vector3.zero;
         _resetTarget.angularVelocity = Vector3.zero;
+        // Set the body's pose, not just the transform: with interpolation on, the next frame would
+        // otherwise redraw the mug between its last two physics poses (where it was before the reset).
+        _resetTarget.position = _startPosition;
+        _resetTarget.rotation = _startRotation;
         _resetTarget.transform.SetPositionAndRotation(_startPosition, _startRotation);
         Debug.Log($"[Physics] t={Time.realtimeSinceStartup:F1}s reset {_resetTarget.name}");
     }

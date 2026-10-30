@@ -38,6 +38,7 @@ public class SplatGrabber : MonoBehaviour
     private Grabbable _inReach;
     private Grabbable _held;
     private Rigidbody _heldBody;
+    private RigidbodyInterpolation _heldInterpolation;
     private Transform _heldOriginalParent;
 
     private void Awake()
@@ -106,9 +107,15 @@ public class SplatGrabber : MonoBehaviour
         _heldOriginalParent = _held.transform.parent;
 
         // Physics would fight the hand, so the body ignores forces/gravity while held.
+        // Interpolation is turned off too: it redraws the body between its last physics poses every frame,
+        // overriding the hand's motion (judder).
         _heldBody = _held.GetComponent<Rigidbody>();
         if (_heldBody != null)
+        {
+            _heldInterpolation = _heldBody.interpolation;
+            _heldBody.interpolation = RigidbodyInterpolation.None;
             _heldBody.isKinematic = true;
+        }
 
         // Parenting to the hand keeps the object's current offset from the hand ("worldPositionStays"),
         // so it doesn't snap into the palm, and it moves exactly with the hand every frame.
@@ -131,7 +138,11 @@ public class SplatGrabber : MonoBehaviour
         if (_heldBody != null)
         {
             // Hand back to physics with the hand's motion, so a flick throws and a gentle release just drops.
+            // Start the body from where the hand left it, then let it smooth its flight again.
+            _heldBody.position = _held.transform.position;
+            _heldBody.rotation = _held.transform.rotation;
             _heldBody.isKinematic = false;
+            _heldBody.interpolation = _heldInterpolation;
             EstimateHandMotion(out velocity, out Vector3 angularVelocity);
             _heldBody.linearVelocity = velocity * _throwScale;
             _heldBody.angularVelocity = angularVelocity;
