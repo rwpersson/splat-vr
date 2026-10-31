@@ -48,7 +48,7 @@ public static class SplatColliderGenerator
         string arguments = string.Format(CultureInfo.InvariantCulture,
             "--no-tty -w \"{0}\"{1} --voxel-size {2} --voxel-opacity {3} --collision-mesh \"{4}\"",
             source, settings.RemoveFloaters ? " -F" : "", settings.VoxelSize, settings.SolidThreshold, voxelOutput);
-        if (!Run(settings, arguments, out string log) || !File.Exists(meshOutput))
+        if (!Run(settings.ToolCommand, settings.name, arguments, out string log) || !File.Exists(meshOutput))
         {
             Debug.LogError($"[SplatCollider] {settings.name}: splat-transform failed\n{settings.ToolCommand} {arguments}\n{log}", settings);
             return null;
@@ -80,26 +80,67 @@ public static class SplatColliderGenerator
     }
 
     /// <summary>
-    /// Finds the floor the same way we did by hand in Phase 2: a histogram of solid splat heights (world up) in 1 cm
-    /// slices; the floor is the lowest strong peak. A plane fitted to the splats in that slice gives the tilt.
-    /// Puts a large thin box with its top on that plane on an "Auto Floor" child.
+    /// Finds the floor (TryFindFloor, the same method we used by hand in Phase 2) and puts a large thin box with its top
+    /// on that plane on an "Auto Floor" child. A floor tilted under 2° gets a level box.
     /// </summary>
     public static BoxCollider GenerateFloor(SplatCollider settings, string source)
     {
-        const float binSize = 0.01f;
-        const float peakFraction = 0.3f; // a floor peak needs at least 30% of the biggest peak's count
-        const float bandHalfWidth = 0.02f;
         const float maxFlatTiltDegrees = 2f;
         const float thickness = 0.1f;
 
-        if (!SplatPly.TryReadSolidPositions(source, settings.SolidThreshold, out Vector3[] local, out string error))
+        if (!TryFindFloor(settings.transform, source, settings.SolidThreshold, out Vector3 centroid, out Vector3 normal, out int n, out string error))
         {
             Debug.LogError($"[SplatCollider] {settings.name}: floor skipped: {error}", settings);
             return null;
         }
+        float tilt = Vector3.Angle(normal, Vector3.up);
+        bool flat = tilt < maxFlatTiltDegrees;
+
+        Transform child = settings.transform.Find("Auto Floor");
+        if (child == null)
+        {
+            child = new GameObject("Auto Floor").transform;
+            Undo.RegisterCreatedObjectUndo(child.gameObject, "Generate Splat Floor");
+            child.SetParent(settings.transform, false);
+        }
+        Undo.RecordObject(child, "Generate Splat Floor");
+        // Undo the splat's mirror (e.g. Scale (1, −1, 1)) so the box has a positive scale, then place it in world space.
+        Vector3 parentScale = settings.transform.lossyScale;
+        child.localScale = new Vector3(Mathf.Sign(parentScale.x), Mathf.Sign(parentScale.y), Mathf.Sign(parentScale.z));
+        child.SetPositionAndRotation(centroid, flat ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, normal));
+
+        BoxCollider box = child.GetComponent<BoxCollider>();
+        if (box == null)
+            box = Undo.AddComponent<BoxCollider>(child.gameObject);
+        Undo.RecordObject(box, "Generate Splat Floor");
+        box.size = new Vector3(settings.FloorSize, thickness, settings.FloorSize);
+        box.center = new Vector3(0f, -thickness / 2f, 0f); // top face on the floor plane
+        EditorUtility.SetDirty(box);
+
+        Debug.Log($"[SplatCollider] {settings.name}: floor at y={centroid.y:F3} m from {n} solid splats, tilt {tilt:F1}° " +
+                  $"({(flat ? "kept level" : "box tilted to match")}), box {settings.FloorSize} × {settings.FloorSize} m", box);
+        return box;
+    }
+
+    /// <summary>
+    /// Floor plane in world space: a histogram of solid splat heights in 1 cm slices; the floor is the lowest strong
+    /// peak; a least-squares plane through the splats in that slice gives its point and normal.
+    /// </summary>
+    public static bool TryFindFloor(Transform splat, string source, float solidThreshold,
+        out Vector3 point, out Vector3 normal, out int n, out string error)
+    {
+        const float binSize = 0.01f;
+        const float peakFraction = 0.3f; // a floor peak needs at least 30% of the biggest peak's count
+        const float bandHalfWidth = 0.02f;
+        point = Vector3.zero;
+        normal = Vector3.up;
+        n = 0;
+
+        if (!SplatPly.TryReadSolidPositions(source, solidThreshold, out Vector3[] local, out error))
+            return false;
 
         // The splat renderer draws the file's positions in the splat's local space, so its matrix takes them to world.
-        Matrix4x4 toWorld = settings.transform.localToWorldMatrix;
+        Matrix4x4 toWorld = splat.localToWorldMatrix;
         var world = new Vector3[local.Length];
         float minY = float.MaxValue, maxY = float.MinValue;
         for (int i = 0; i < local.Length; i++)
@@ -128,14 +169,13 @@ public static class SplatColliderGenerator
         }
         if (floorBin < 0)
         {
-            Debug.LogWarning($"[SplatCollider] {settings.name}: no floor peak found", settings);
-            return null;
+            error = "no floor peak found";
+            return false;
         }
 
         // Least-squares plane y = a·x + b·z + c through the splats near the peak.
         float peakY = minY + (floorBin + 0.5f) * binSize;
         double sxx = 0, sxz = 0, szz = 0, sx = 0, sz = 0, sxy = 0, szy = 0, sy = 0;
-        int n = 0;
         foreach (Vector3 p in world)
         {
             if (Mathf.Abs(p.y - peakY) > bandHalfWidth)
@@ -145,41 +185,15 @@ public static class SplatColliderGenerator
             sxy += p.x * p.y; szy += p.z * p.y;
             n++;
         }
-        Vector3 centroid = new Vector3((float)(sx / n), (float)(sy / n), (float)(sz / n));
-        Vector3 normal = Vector3.up;
-        float tilt = 0f;
+        point = new Vector3((float)(sx / n), (float)(sy / n), (float)(sz / n));
+        normal = Vector3.up;
         if (SolvePlane(sxx, sxz, szz, sx, sz, sxy, szy, sy, n, out double a, out double b, out double c))
         {
             normal = new Vector3((float)-a, 1f, (float)-b).normalized;
-            tilt = Vector3.Angle(normal, Vector3.up);
-            centroid.y = (float)(a * centroid.x + b * centroid.z + c);
+            point.y = (float)(a * point.x + b * point.z + c);
         }
-        bool flat = tilt < maxFlatTiltDegrees;
-
-        Transform child = settings.transform.Find("Auto Floor");
-        if (child == null)
-        {
-            child = new GameObject("Auto Floor").transform;
-            Undo.RegisterCreatedObjectUndo(child.gameObject, "Generate Splat Floor");
-            child.SetParent(settings.transform, false);
-        }
-        Undo.RecordObject(child, "Generate Splat Floor");
-        // Undo the splat's mirror (e.g. Scale (1, −1, 1)) so the box has a positive scale, then place it in world space.
-        Vector3 parentScale = settings.transform.lossyScale;
-        child.localScale = new Vector3(Mathf.Sign(parentScale.x), Mathf.Sign(parentScale.y), Mathf.Sign(parentScale.z));
-        child.SetPositionAndRotation(centroid, flat ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, normal));
-
-        BoxCollider box = child.GetComponent<BoxCollider>();
-        if (box == null)
-            box = Undo.AddComponent<BoxCollider>(child.gameObject);
-        Undo.RecordObject(box, "Generate Splat Floor");
-        box.size = new Vector3(settings.FloorSize, thickness, settings.FloorSize);
-        box.center = new Vector3(0f, -thickness / 2f, 0f); // top face on the floor plane
-        EditorUtility.SetDirty(box);
-
-        Debug.Log($"[SplatCollider] {settings.name}: floor at y={centroid.y:F3} m from {n} solid splats, tilt {tilt:F1}° " +
-                  $"({(flat ? "kept level" : "box tilted to match")}), box {settings.FloorSize} × {settings.FloorSize} m", box);
-        return box;
+        error = null;
+        return true;
     }
 
     // Normal equations for y = a·x + b·z + c.
@@ -234,10 +248,11 @@ public static class SplatColliderGenerator
         return collider;
     }
 
-    private static bool Run(SplatCollider settings, string arguments, out string log)
+    /// <summary>Runs splat-transform (or another command) and waits; <paramref name="label"/> is shown in the progress bar.</summary>
+    public static bool Run(string toolCommand, string label, string arguments, out string log)
     {
         // Through cmd so npm's .cmd launcher on PATH is found, the same as typing the command in a terminal.
-        var startInfo = new ProcessStartInfo("cmd.exe", $"/s /c \"{settings.ToolCommand} {arguments}\"")
+        var startInfo = new ProcessStartInfo("cmd.exe", $"/s /c \"{toolCommand} {arguments}\"")
         {
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -245,7 +260,7 @@ public static class SplatColliderGenerator
             CreateNoWindow = true,
         };
 
-        EditorUtility.DisplayProgressBar("Splat Collider", $"Running splat-transform on {settings.name}…", 0.5f);
+        EditorUtility.DisplayProgressBar("Splat Collider", $"Running splat-transform on {label}…", 0.5f);
         try
         {
             using Process process = Process.Start(startInfo);
