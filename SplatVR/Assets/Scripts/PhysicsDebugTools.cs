@@ -5,7 +5,8 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Physics test helpers for the Interaction scene.
 /// Right controller (editor key in brackets):
-///   B (V) = show/hide wireframes of every BoxCollider, to check they line up with the splats
+///   B (V) = show/hide every collider, to check they line up with the splats: BoxColliders as wireframes,
+///           MeshColliders (e.g. the auto-generated ones) as see-through surfaces. Only enabled colliders are shown.
 ///   A (R) = put the reset target (the mug) back where it started, at rest
 /// Also runs physics at the display rate, so a falling object moves once per frame (no stepping judder).
 /// Every action is logged with a "[Physics]" tag.
@@ -18,6 +19,9 @@ public class PhysicsDebugTools : MonoBehaviour
     [Tooltip("Unlit material for the wireframes. Assigned here so the shader is included in builds.")]
     [SerializeField] private Material _lineMaterial;
 
+    [Tooltip("See-through material for MeshColliders. Assigned here so the shader variant is included in builds.")]
+    [SerializeField] private Material _meshMaterial;
+
     [SerializeField] private float _lineWidth = 0.005f;
     [SerializeField] private float _physicsRate = 72f;
 
@@ -26,7 +30,8 @@ public class PhysicsDebugTools : MonoBehaviour
 
     private InputAction _wireframeAction;
     private InputAction _resetAction;
-    private readonly List<LineRenderer> _wireframes = new List<LineRenderer>();
+    // Each debug view with the collider it shows, so it can follow that collider being switched on/off.
+    private readonly List<(Collider collider, Renderer view)> _wireframes = new List<(Collider, Renderer)>();
     private bool _wireframesBuilt;
     private bool _wireframesVisible;
     private Vector3 _startPosition;
@@ -83,12 +88,24 @@ public class PhysicsDebugTools : MonoBehaviour
             BuildWireframes();
 
         _wireframesVisible = !_wireframesVisible;
-        foreach (LineRenderer line in _wireframes)
-        {
-            if (line != null)
-                line.enabled = _wireframesVisible;
-        }
+        UpdateWireframes();
         Debug.Log($"[Physics] t={Time.realtimeSinceStartup:F1}s wireframes={_wireframesVisible} count={_wireframes.Count}");
+    }
+
+    // Every frame, so switching collider sets (ColliderSetToggle) shows up immediately.
+    private void Update()
+    {
+        if (_wireframesBuilt)
+            UpdateWireframes();
+    }
+
+    private void UpdateWireframes()
+    {
+        foreach ((Collider collider, Renderer view) in _wireframes)
+        {
+            if (view != null)
+                view.enabled = _wireframesVisible && collider != null && collider.enabled && collider.gameObject.activeInHierarchy;
+        }
     }
 
     private void OnReset(InputAction.CallbackContext context)
@@ -112,11 +129,24 @@ public class PhysicsDebugTools : MonoBehaviour
         Debug.Log($"[Physics] t={Time.realtimeSinceStartup:F1}s reset {_resetTarget.name}");
     }
 
-    /// <summary>Makes one LineRenderer per BoxCollider, parented to the collider so it follows a moving body.</summary>
+    /// <summary>
+    /// Makes one LineRenderer per BoxCollider and one see-through mesh per MeshCollider, parented to the collider
+    /// so it follows a moving body.
+    /// </summary>
     private void BuildWireframes()
     {
         _wireframesBuilt = true;
-        foreach (BoxCollider box in FindObjectsByType<BoxCollider>(FindObjectsSortMode.None))
+        foreach (MeshCollider meshCollider in FindObjectsByType<MeshCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            var meshObject = new GameObject($"Debug Mesh {meshCollider.name}");
+            meshObject.transform.SetParent(meshCollider.transform, false);
+            meshObject.AddComponent<MeshFilter>().sharedMesh = meshCollider.sharedMesh;
+            var meshRenderer = meshObject.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = _meshMaterial;
+            _wireframes.Add((meshCollider, meshRenderer));
+        }
+
+        foreach (BoxCollider box in FindObjectsByType<BoxCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             var lineObject = new GameObject($"Wireframe {box.name}");
             lineObject.transform.SetParent(box.transform, false);
@@ -137,7 +167,7 @@ public class PhysicsDebugTools : MonoBehaviour
                     (corner & 2) != 0 ? half.y : -half.y,
                     (corner & 4) != 0 ? half.z : -half.z));
             }
-            _wireframes.Add(line);
+            _wireframes.Add((box, line));
         }
     }
 }
