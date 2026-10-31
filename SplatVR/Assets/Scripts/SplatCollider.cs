@@ -4,7 +4,8 @@ using UnityEngine;
 /// Settings for generating this splat's collider automatically from its source scan (Phase 5).
 /// In the editor: click "Generate Collider" in the Inspector (or Tools → SplatVR → Generate All Colliders).
 /// SplatColliderGenerator then runs splat-transform on the source file, imports the resulting collision mesh and puts it
-/// on an "Auto Collider" child of this object, so the collider follows the splat's transform.
+/// on an "Auto Collider" child of this object, so the collider follows the splat's transform. Optionally it also finds
+/// the floor height from the scan and adds an "Auto Floor" box.
 /// Holds data only; nothing runs on the headset.
 /// </summary>
 [RequireComponent(typeof(Gaussians.ThreeD.GaussianSplat3DRenderer))]
@@ -21,6 +22,12 @@ public class SplatCollider : MonoBehaviour
 
     [Tooltip("Remove floaters (splats that don't contribute to any solid voxel) first.")]
     public bool RemoveFloaters = true;
+
+    [Tooltip("Also find the floor (lowest strong horizontal layer of solid splats) and put a large box under it.")]
+    public bool GenerateFloor = true;
+
+    [Tooltip("Floor box width/length in meters; extends past the scan, which usually has little floor.")]
+    public float FloorSize = 20f;
 
     [Tooltip("Command for splat-transform (npm i -g @playcanvas/splat-transform). A full path works too.")]
     public string ToolCommand = "splat-transform";

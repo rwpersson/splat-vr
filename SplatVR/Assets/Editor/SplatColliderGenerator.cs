@@ -73,7 +73,142 @@ public static class SplatColliderGenerator
 
         Debug.Log($"[SplatCollider] {settings.name}: {mesh.triangles.Length / 3} triangles → {assetPath} " +
                   $"(voxel {settings.VoxelSize} m, solid ≥ {settings.SolidThreshold}, floaters {(settings.RemoveFloaters ? "removed" : "kept")})", collider);
+
+        if (settings.GenerateFloor)
+            GenerateFloor(settings, source);
         return collider;
+    }
+
+    /// <summary>
+    /// Finds the floor the same way we did by hand in Phase 2: a histogram of solid splat heights (world up) in 1 cm
+    /// slices; the floor is the lowest strong peak. A plane fitted to the splats in that slice gives the tilt.
+    /// Puts a large thin box with its top on that plane on an "Auto Floor" child.
+    /// </summary>
+    public static BoxCollider GenerateFloor(SplatCollider settings, string source)
+    {
+        const float binSize = 0.01f;
+        const float peakFraction = 0.3f; // a floor peak needs at least 30% of the biggest peak's count
+        const float bandHalfWidth = 0.02f;
+        const float maxFlatTiltDegrees = 2f;
+        const float thickness = 0.1f;
+
+        if (!SplatPly.TryReadSolidPositions(source, settings.SolidThreshold, out Vector3[] local, out string error))
+        {
+            Debug.LogError($"[SplatCollider] {settings.name}: floor skipped: {error}", settings);
+            return null;
+        }
+
+        // The splat renderer draws the file's positions in the splat's local space, so its matrix takes them to world.
+        Matrix4x4 toWorld = settings.transform.localToWorldMatrix;
+        var world = new Vector3[local.Length];
+        float minY = float.MaxValue, maxY = float.MinValue;
+        for (int i = 0; i < local.Length; i++)
+        {
+            world[i] = toWorld.MultiplyPoint3x4(local[i]);
+            minY = Mathf.Min(minY, world[i].y);
+            maxY = Mathf.Max(maxY, world[i].y);
+        }
+
+        int binCount = Mathf.FloorToInt((maxY - minY) / binSize) + 1;
+        var counts = new int[binCount];
+        foreach (Vector3 p in world)
+            counts[Mathf.FloorToInt((p.y - minY) / binSize)]++;
+
+        // Smooth over 3 slices so a surface split across two slices still counts as one peak.
+        var smooth = new int[binCount];
+        for (int i = 0; i < binCount; i++)
+            smooth[i] = counts[i] + (i > 0 ? counts[i - 1] : 0) + (i < binCount - 1 ? counts[i + 1] : 0);
+        int biggest = smooth.Max();
+
+        int floorBin = -1;
+        for (int i = 1; i < binCount - 1 && floorBin < 0; i++)
+        {
+            if (smooth[i] >= smooth[i - 1] && smooth[i] >= smooth[i + 1] && smooth[i] >= peakFraction * biggest)
+                floorBin = i;
+        }
+        if (floorBin < 0)
+        {
+            Debug.LogWarning($"[SplatCollider] {settings.name}: no floor peak found", settings);
+            return null;
+        }
+
+        // Least-squares plane y = a·x + b·z + c through the splats near the peak.
+        float peakY = minY + (floorBin + 0.5f) * binSize;
+        double sxx = 0, sxz = 0, szz = 0, sx = 0, sz = 0, sxy = 0, szy = 0, sy = 0;
+        int n = 0;
+        foreach (Vector3 p in world)
+        {
+            if (Mathf.Abs(p.y - peakY) > bandHalfWidth)
+                continue;
+            sxx += p.x * p.x; sxz += p.x * p.z; szz += p.z * p.z;
+            sx += p.x; sz += p.z; sy += p.y;
+            sxy += p.x * p.y; szy += p.z * p.y;
+            n++;
+        }
+        Vector3 centroid = new Vector3((float)(sx / n), (float)(sy / n), (float)(sz / n));
+        Vector3 normal = Vector3.up;
+        float tilt = 0f;
+        if (SolvePlane(sxx, sxz, szz, sx, sz, sxy, szy, sy, n, out double a, out double b, out double c))
+        {
+            normal = new Vector3((float)-a, 1f, (float)-b).normalized;
+            tilt = Vector3.Angle(normal, Vector3.up);
+            centroid.y = (float)(a * centroid.x + b * centroid.z + c);
+        }
+        bool flat = tilt < maxFlatTiltDegrees;
+
+        Transform child = settings.transform.Find("Auto Floor");
+        if (child == null)
+        {
+            child = new GameObject("Auto Floor").transform;
+            Undo.RegisterCreatedObjectUndo(child.gameObject, "Generate Splat Floor");
+            child.SetParent(settings.transform, false);
+        }
+        Undo.RecordObject(child, "Generate Splat Floor");
+        // Undo the splat's mirror (e.g. Scale (1, −1, 1)) so the box has a positive scale, then place it in world space.
+        Vector3 parentScale = settings.transform.lossyScale;
+        child.localScale = new Vector3(Mathf.Sign(parentScale.x), Mathf.Sign(parentScale.y), Mathf.Sign(parentScale.z));
+        child.SetPositionAndRotation(centroid, flat ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, normal));
+
+        BoxCollider box = child.GetComponent<BoxCollider>();
+        if (box == null)
+            box = Undo.AddComponent<BoxCollider>(child.gameObject);
+        Undo.RecordObject(box, "Generate Splat Floor");
+        box.size = new Vector3(settings.FloorSize, thickness, settings.FloorSize);
+        box.center = new Vector3(0f, -thickness / 2f, 0f); // top face on the floor plane
+        EditorUtility.SetDirty(box);
+
+        Debug.Log($"[SplatCollider] {settings.name}: floor at y={centroid.y:F3} m from {n} solid splats, tilt {tilt:F1}° " +
+                  $"({(flat ? "kept level" : "box tilted to match")}), box {settings.FloorSize} × {settings.FloorSize} m", box);
+        return box;
+    }
+
+    // Normal equations for y = a·x + b·z + c.
+    private static bool SolvePlane(double sxx, double sxz, double szz, double sx, double sz, double sxy, double szy, double sy, int n,
+        out double a, out double b, out double c)
+    {
+        double[,] A = { { sxx, sxz, sx }, { sxz, szz, sz }, { sx, sz, n } };
+        double[] r = { sxy, szy, sy };
+        double det = Det3(A);
+        a = b = c = 0;
+        if (System.Math.Abs(det) < 1e-12)
+            return false;
+        a = Det3(Replace(A, 0, r)) / det;
+        b = Det3(Replace(A, 1, r)) / det;
+        c = Det3(Replace(A, 2, r)) / det;
+        return true;
+    }
+
+    private static double Det3(double[,] m) =>
+        m[0, 0] * (m[1, 1] * m[2, 2] - m[1, 2] * m[2, 1])
+        - m[0, 1] * (m[1, 0] * m[2, 2] - m[1, 2] * m[2, 0])
+        + m[0, 2] * (m[1, 0] * m[2, 1] - m[1, 1] * m[2, 0]);
+
+    private static double[,] Replace(double[,] m, int column, double[] values)
+    {
+        var copy = (double[,])m.Clone();
+        for (int row = 0; row < 3; row++)
+            copy[row, column] = values[row];
+        return copy;
     }
 
     private static MeshCollider GetOrCreateChildCollider(Transform splat)
