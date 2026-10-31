@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 /// If the object has a Rigidbody, physics is paused while it's held (kinematic) and, on release,
 /// it gets the hand's recent velocity and spin, so it can be dropped or thrown.
 /// The optional indicator (e.g. a small sphere) shows the state: white = idle, yellow = in reach, green = holding.
+/// ControllerModel can swap it for the controller model's renderers, which get a light tint instead.
 /// Every grab and release is logged with a "[Grab]" tag.
 /// </summary>
 public class SplatGrabber : MonoBehaviour
@@ -32,6 +33,10 @@ public class SplatGrabber : MonoBehaviour
     private readonly float[] _times = new float[VelocitySamples];
     private int _sampleCount;
     private int _sampleIndex;
+
+    private Renderer[] _indicators;
+    private Color[] _indicatorBaseColors;
+    private float _tintStrength = 1f;
 
     private Grabbable[] _grabbables;
     private InputAction _gripAction;
@@ -187,9 +192,34 @@ public class SplatGrabber : MonoBehaviour
             angularVelocity = axis * (angleDegrees * Mathf.Deg2Rad / dt);
     }
 
+    /// <summary>
+    /// Replaces the indicator with several renderers (e.g. the controller model) that are tinted toward the state color
+    /// by <paramref name="tintStrength"/>, keeping their own colors underneath.
+    /// </summary>
+    public void SetIndicators(Renderer[] renderers, float tintStrength)
+    {
+        _indicator = null;
+        _indicators = renderers;
+        _indicatorBaseColors = new Color[renderers.Length];
+        for (int i = 0; i < renderers.Length; i++)
+            _indicatorBaseColors[i] = renderers[i].material.color;
+        _tintStrength = tintStrength;
+        SetIndicator(_held != null ? _holdingColor : _idleColor);
+    }
+
     private void SetIndicator(Color color)
     {
         if (_indicator != null)
             _indicator.material.color = color;
+
+        if (_indicators == null)
+            return;
+        // Idle is white, so it leaves the model's own colors untouched.
+        Color tint = Color.Lerp(Color.white, color, _tintStrength);
+        for (int i = 0; i < _indicators.Length; i++)
+        {
+            if (_indicators[i] != null)
+                _indicators[i].material.color = _indicatorBaseColors[i] * tint;
+        }
     }
 }

@@ -472,6 +472,7 @@ GameObject:
   - component: {fileID: 278488691}
   - component: {fileID: 278488692}
   - component: {fileID: 278488693}
+  - component: {fileID: 278488694}
   m_Layer: 0
   m_Name: Left Hand
   m_TagString: Untagged
@@ -611,6 +612,25 @@ MonoBehaviour:
   _inReachColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   _holdingColor: {r: 0, g: 1, b: 0, a: 1}
   _throwScale: 1
+--- !u!114 &278488694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 278488690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5945542531fb1946862d5105862a4df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ControllerModel
+  _hand: 0
+  _fallback: {fileID: 702861741}
+  _materialTemplate: {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  _grabber: {fileID: 278488693}
+  _tintStrength: 0.35
+  _rotationOffset: {x: 0, y: 180, z: 0}
+  _positionOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -1625,6 +1645,7 @@ GameObject:
   - component: {fileID: 1989835379}
   - component: {fileID: 1989835378}
   - component: {fileID: 1989835380}
+  - component: {fileID: 1989835381}
   m_Layer: 0
   m_Name: Right Hand
   m_TagString: Untagged
@@ -1764,6 +1785,25 @@ MonoBehaviour:
   _inReachColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   _holdingColor: {r: 0, g: 1, b: 0, a: 1}
   _throwScale: 1
+--- !u!114 &1989835381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1989835377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5945542531fb1946862d5105862a4df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ControllerModel
+  _hand: 1
+  _fallback: {fileID: 1842760317}
+  _materialTemplate: {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  _grabber: {fileID: 1989835380}
+  _tintStrength: 0.35
+  _rotationOffset: {x: 0, y: 180, z: 0}
+  _positionOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &2000549161
 GameObject:
   m_ObjectHideFlags: 0

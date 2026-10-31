@@ -606,6 +606,28 @@ MonoBehaviour:
   targetOpenXRApiVersion: 
   required: 0
   customRuntimeLoaderName: 
+--- !u!114 &2716636294774345124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 410184d5123ebf640a894f9902620f30, type: 3}
+  m_Name: ControllerRenderModelFeature Android
+  m_EditorClassIdentifier: Assembly-CSharp::ControllerRenderModelFeature
+  m_enabled: 1
+  nameUi: SplatVR Controller Render Models
+  version: 0.1.0
+  featureIdInternal: com.reidpersson.splatvr.controller-render-models
+  openxrExtensionStrings: XR_FB_render_model
+  company: SplatVR
+  priority: 0
+  targetOpenXRApiVersion: 
+  required: 0
+  customRuntimeLoaderName: 
 --- !u!114 &2804824491956197933
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -965,6 +987,7 @@ MonoBehaviour:
   - {fileID: 4525792244694192072}
   - {fileID: 3664512954070004583}
   - {fileID: -4467344850144899030}
+  - {fileID: 2716636294774345124}
   - {fileID: -7566643988951003318}
   customLoaderName: 
   m_renderMode: 1
