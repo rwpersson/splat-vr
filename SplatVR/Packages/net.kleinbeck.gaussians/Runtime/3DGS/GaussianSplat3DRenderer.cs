@@ -47,6 +47,11 @@ namespace Gaussians.ThreeD
         // SplatVR patch 2: occlusion between separately sorted splat objects (and meshes) without a GaussiansGroup.
         [Tooltip("URP only, for the environment (e.g. a room scan): draw this object's color first, then write approximate depth for its solid splats, so other splats behind it are hidden. It never hides its own splats.")]
         public bool m_Occluder = false;
+        // SplatVR patch 2: lets a cheaper copy (e.g. a decimated version of the same scan) supply the depth,
+        // while the full-quality object only draws color.
+        public enum OccluderRole { ColorAndDepth, ColorOnly, DepthOnly }
+        [Tooltip("Occluder: ColorAndDepth = draw color, then write depth. ColorOnly = draw color in the occluder pass but leave depth to a proxy. DepthOnly = invisible proxy that only writes depth.")]
+        public OccluderRole m_OccluderRole = OccluderRole.ColorAndDepth;
         [Range(0.0f, 1.0f)]
         [Tooltip("Occluder depth: minimum per-fragment opacity that counts as solid. Higher = fewer, cheaper depth fragments, but thin or faint surfaces stop occluding.")]
         public float m_OccluderAlphaCutoff = 0.5f;

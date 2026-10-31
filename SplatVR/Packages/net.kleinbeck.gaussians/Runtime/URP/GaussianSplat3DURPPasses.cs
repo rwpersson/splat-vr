@@ -167,7 +167,7 @@ namespace Gaussians
                 var system = GaussianSplat3DRenderSystem.instance;
                 var selection = system.CollectForCamera(camera.camera);
                 var draws = system.GatherOccluderDraws(selection, out var colorDraws);
-                if (draws.Count == 0)
+                if (draws.Count == 0 && colorDraws.Count == 0)
                     return;
 
                 var resources = frameData.Get<UniversalResourceData>();

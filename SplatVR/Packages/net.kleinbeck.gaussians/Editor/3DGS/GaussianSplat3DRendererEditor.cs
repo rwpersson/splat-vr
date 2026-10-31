@@ -127,6 +127,7 @@ namespace Gaussians.ThreeD.Editor
             SharedField("m_WriteDepth", new GUIContent("Write Depth (URP Only)"));
             // SplatVR patch 2: per-renderer occluder depth pre-pass (not a group override).
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Occluder"), new GUIContent("Occluder (URP Only)"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_OccluderRole"), new GUIContent("Occluder Role"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_OccluderAlphaCutoff"), new GUIContent("Occluder Alpha Cutoff"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_OccluderDepthOffset"), new GUIContent("Occluder Depth Offset (m)"));
             SharedField("m_AlphaCutoff", new GUIContent("Alpha Cutoff"));

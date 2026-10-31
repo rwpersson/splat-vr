@@ -330,8 +330,9 @@ namespace Gaussians.ThreeD
                     RenderOrder = gs.EffectiveRenderOrder,
                     SortPosition = gs.transform.position,
                 };
-                draws.Add(draw);
-                if (gs.usesDirectTransparentPath)
+                if (gs.m_OccluderRole != GaussianSplat3DRenderer.OccluderRole.ColorOnly)
+                    draws.Add(draw);
+                if (gs.usesDirectTransparentPath && gs.m_OccluderRole != GaussianSplat3DRenderer.OccluderRole.DepthOnly)
                     colorDraws.Add(draw);
             }
             // Back to front between occluders, like the transparent queue (each object's splats are already sorted).
