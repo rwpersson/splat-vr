@@ -7,7 +7,7 @@ Portfolio page with video and pictures: https://rwpersson.github.io/portfolio/pr
 ## What it does
 
 **In the headset** (Unity 6 · OpenXR · URP, no Meta SDK):
-- Gaussian-splat rooms at 72 fps on a phone-class chip (splat budget measured, see `docs/BENCHMARKS.md`)
+- Gaussian-splat rooms at 72 fps on a phone-class chip (splat budget set from measurements)
 - Grab, drop and throw a scanned object (the mug is a splat too), with physics against the room
 - The room hides objects behind it: an occlusion pre-pass patched into the open-source renderer
 - Real controller models from the headset (`XR_FB_render_model`), smooth locomotion
@@ -23,12 +23,10 @@ Tested on a second scan it had never seen, with unchanged settings.
 
 ## Where to look
 
-- `ROADMAP.md`: the plan, phase by phase
-- `docs/DECISIONS.md`: every meaningful choice, with the options considered and why
-- `docs/BENCHMARKS.md`: performance measurements
-- `docs/SESSION_LOG.md`: what happened each session
 - `SplatVR/Assets/Editor/`: the automatic pipeline (`SplatScanImporter`, `SplatColliderGenerator`, `SplatObjectPlacer`)
-- `SplatVR/Packages/net.kleinbeck.gaussians/`: embedded copy of [Unity Gaussians](https://github.com/ninjamode/Unity-VR-Gaussian-Splatting) (MIT, by Constantin Kleinbeck) with small `SplatVR patch` edits
+- `SplatVR/Packages/net.kleinbeck.gaussians/`: embedded copy of [Unity Gaussians](https://github.com/ninjamode/Unity-VR-Gaussian-Splatting) (MIT, by Constantin Kleinbeck) with small `SplatVR patch` edits (grep for them)
+- `SplatVR/Assets/Scripts/`: grabbing and throwing, occlusion and collider toggles, controller models, locomotion
+- Scenes: `Couch` (a second scan, imported fully automatically) and `Interaction` (the desk)
 
 Scan files (`.ply`) and generated splat assets aren't in the repo (size); the collision meshes are.
 
